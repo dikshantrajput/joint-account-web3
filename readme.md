@@ -1,6 +1,7 @@
 JOINT ACCOUNTS IN WEB3.0
 
 Smart contract -> https://github.com/dikshantrajput/multisig-wallet-contract
+
 Intro:
 joint account -> more than one member is the owner of that account and can send transactions to another person or do something with the money they together saved or collected.
 
