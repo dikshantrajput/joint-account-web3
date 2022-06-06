@@ -1,9 +1,9 @@
 JOINT ACCOUNTS IN WEB3.0
 
 Intro:
-# joint account -> more than one member is the owner of that account and can send transactions to another person or do something with the money they together saved or collected.
+joint account -> more than one member is the owner of that account and can send transactions to another person or do something with the money they together saved or collected.
 
-# NOTE:There will be separate accounts but all the tx will be happening when a proposal gets a certain number of votes.
+NOTE:There will be separate accounts but all the tx will be happening when a proposal gets a certain number of votes.
 
 # Flow:
 * Submitting a proposal
