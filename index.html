@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joint Account</title>
+    <style>
+        .none{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Joint Account</h1>
+    <span id="contractAddress"></span>
+    <br><br>
+    <div class="initBody">
+        <input type="text" id="address" placeholder="address">
+        <button id="load">Load Account</button>
+        <br> 
+        <br> 
+        <h3>OR</h3>
+        <div class="new">
+            <div>
+                <input type="text" class="newAddress" placeholder="address"><button id="addAddressBtn">+</button>
+                <br><br>
+            </div>
+        </div>
+        <input type="number" id="requiredSignatures" placeholder="minimum approvals">
+        <button id="newAccount">Open New Account</button>
+    </div>
+
+    <div class="actionContainer none">
+        <h4>Balance : <span id="balance"></span></h4>
+        <input type="text" id="fund" placeholder="amount">
+        <button id="fundWallet">Fund Wallet</button>
+        <br><br>
+        <input type="text" id="propose_to" placeholder="To">
+        <input type="text" id="propose_amount" placeholder="Amount">
+        <input type="text" id="propose_data" placeholder="Data">
+        <button id="propose">Propose Transaction</button>
+
+        <br><br>
+
+        <button id="allProposals">Get all proposals</button>
+        <div class="proposals"></div>
+    </div>
+    <footer style="text-align:center;margin-top: 20px;">
+        Developed with &hearts; by DIKSHANT RAJPUT - <a href="https://drive.google.com/file/d/1QW-84wOmmWAk73IlHa_rjnmr64GQNUQC/view?usp=sharing">Resume</a>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4-rc.0/web3.min.js" integrity="sha512-RGPKVfQewHGfk9yaB7ThGPKAQU+civS5awsfStLg22jrWbqgDkNzPtIwNFpFApr3ccjB730SRxi+KnDjhIuTpw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="text/javascript" src="./config.js"></script>
+    <script>
+        window.addEventListener("load",()=>{
+            if(typeof window.ethereum === undefined){
+                return alert("Please install metamask")
+            }
+            initializeApp()
+        })
+
+        const initializeApp = async ()=>{
+            window.web3 = new Web3(new Web3(window.ethereum))
+            let accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+            window.defaultAccount = accounts[0]
+        }
+        
+        const openNewAccount = async ()=>{
+            let addressesElement = document.querySelectorAll('.newAddress')
+            let addresses = []
+            let c = 0;
+            Array.from(addressesElement).forEach((addr)=>{
+                let address = addr.value
+                if(window.web3.utils.isAddress(address)){
+                    c++
+                    addresses.push(address)
+                }
+            })
+            let requiredSignatures = document.querySelector('#requiredSignatures').value
+            if(requiredSignatures === '' || requiredSignatures === 0 || requiredSignatures > c){
+                return alert("Requred Approvals can't be greater than valid addresses and can't be 0")
+            }
+            // ["0x525c9C19b7c57f9c02b352C7FD8F93526ab694fB","0xC71207584348042e773C1AD780b3738f9C74b7c7","0x4bc501e30bA11d9f17D7a63678761896c3BDeF97"]
+            try{
+                let contract = new window.web3.eth.Contract(abi)
+
+                let gasPrice = await window.web3.eth.getGasPrice()
+
+                const gasEstimate = await contract.deploy({data:'0x'+(bytecode.object),arguments:[addresses,requiredSignatures]}).estimateGas({from:window.defaultAccount})
+
+                let r = await contract.deploy({data:'0x'+(bytecode.object),arguments:[addresses,requiredSignatures]}).send({from:window.defaultAccount,gas:gasEstimate,gasPrice:gasPrice})
+                let contractAddress = r._address
+                if(contractAddress === undefined){
+                    alert('View your transaction on blockchain explorer and get the contract address created')
+                }else{
+                    document.querySelector('#contractAddress').innerHTML = contractAddress
+                }
+            }catch(err){
+                alert(err.message)
+                console.log(err)
+            }
+        }
+        
+        const loadAccount = async ()=>{
+            let addr = document.querySelector("#address").value
+            if(! addr || ! window.web3.utils.isAddress(addr)) return alert('Enter valid Address')
+            //laod contract
+            try{
+                window.contract = new window.web3.eth.Contract(abi,addr)
+                let balance = await window.contract.methods.balance().call()
+                document.querySelector('#contractAddress').innerHTML = addr
+                document.querySelector('.initBody').innerHTML = ''
+                document.querySelector('.actionContainer').style.display="block"
+                document.querySelector('#balance').innerHTML = parseInt(balance)/parseInt("1000000000000000000") + " ether"
+
+                initJointAccount()
+            }catch(err){
+                alert("Error " ,err.message)
+                console.log(err)
+            }
+        }
+
+        const addAddress = async ()=>{
+            let newAddr = document.createElement('div')
+            newAddr.innerHTML = `<input type="text" class="newAddress" placeholder="address"><br><br>`
+            document.querySelector('.new').append(newAddr)
+        } 
+
+        document.querySelector("#load").addEventListener('click',loadAccount)
+        document.querySelector("#newAccount").addEventListener('click',openNewAccount)
+        document.querySelector("#addAddressBtn").addEventListener('click',addAddress)
+        
+        const initJointAccount = async ()=>{
+            let logOptions = {
+                address:["0x525c9C19b7c57f9c02b352C7FD8F93526ab694fB","0xC71207584348042e773C1AD780b3738f9C74b7c7","0x4bc501e30bA11d9f17D7a63678761896c3BDeF97"]
+            };
+            
+            try{
+                window.contract.events.ProposeTransaction(logOptions)
+                .on('data', event => console.log(event))
+                .on('changed', changed => console.log(changed))
+                .on('error', err => console.log(err))
+                .on('connected', str => console.log(str))
+
+            }catch(err){
+                console.log(err)
+            }
+        }
+        
+        const fundWallet = async ()=>{
+            let amount = document.querySelector('#fund').value
+            if(amount<=0) return alert("Amount can't be 0");
+            try{
+                let receipt = await window.contract.methods.deposit().send({from:window.defaultAccount,value:window.web3.utils.toWei(amount,'ether')})
+                if(receipt.transactionHash){
+                    let balance = await window.contract.methods.balance().call()
+                    document.querySelector('#balance').innerHTML = parseInt(balance)/parseInt("1000000000000000000") + " ether"
+                    document.querySelector('#fund').value = 0
+                }
+
+            }catch(err){
+                console.log(err)
+            }
+        }
+        
+        const proposeTransaction = async ()=>{
+            let to = document.querySelector('#propose_to').value
+            let amount = document.querySelector('#propose_amount').value
+            let data = document.querySelector('#propose_data').value
+
+            if(!to || !amount || !data || !window.web3.utils.isAddress(to)){
+                return alert("Please enter valid data");
+            }
+
+            try{
+                amount = window.web3.utils.toWei(amount,'ether')
+                let gasPrice = await window.web3.eth.getGasPrice()
+                let gasEstimate = await window.contract.methods.proposeTransaction(to,amount,data).estimateGas({from:window.defaultAccount})
+    
+                let receipt = await window.contract.methods.proposeTransaction(to,amount,data).send({from:window.defaultAccount,gas:gasEstimate,gasPrice:gasPrice})
+                
+                if(receipt.transactionHash){
+                    document.querySelector('#propose_to').value = ""
+                    document.querySelector('#propose_amount').value = ""
+                    document.querySelector('#propose_data').value = ""
+                }
+            }catch(err){
+                console.log(err)
+            }
+
+        }
+
+        const getAllProposals = async ()=>{
+            let txCount = await window.contract.methods.txId().call()
+            document.querySelector(".proposals").innerHTML = ""
+            for(let i=0;i<txCount;i++){
+                let tx = await window.contract.methods.transactions(i).call()
+                let proposalElement = document.createElement("div")
+                let op = `<div class="proposal" style="padding:10px;margin:10px 0">
+                            <strong>Id :</strong> <span>${i}</span><br>
+                            <strong>By :</strong> <span>${tx.from}</span><br>
+                            <strong>To :</strong> <span>${tx.to}</span><br>
+                            <strong>Amount :</strong> <span>${parseInt(tx.value)/parseInt("1000000000000000000") + " ether"}</span><br>
+                            <strong>Approvals :</strong> <span>${tx.votes}</span><br>
+                            <strong>Data :</strong> <span>${tx.data}</span><br>
+                            `
+
+                            if(tx.isExecuted){
+                                op+=`<strong>Executed</strong>`
+                            }else{
+                                op+=`<strong>Time :</strong> <span>${new Date(tx.timestamp*1000).toLocaleDateString() + " " + new Date(tx.timestamp*1000).toLocaleTimeString()}</span><br>
+                                <button class="approve" onclick="approveProposal(${i})">Approve</button><br>`
+                                if(tx.from.toLowerCase() === window.defaultAccount.toLowerCase()){
+                                    op+=`<button onclick="executeProposal(${i})">Execute</button><br></div>`
+                                }else{
+                                    op+='</div>'
+                                }
+                            }
+                proposalElement.innerHTML = op  
+                document.querySelector(".proposals").append(proposalElement)
+            }
+        }
+
+        const approveProposal = async (id)=>{
+            try{
+                let gasPrice = await window.web3.eth.getGasPrice()
+                let gasEstimate = await window.contract.methods.approveTransaction(id).estimateGas({from:window.defaultAccount})
+    
+                let receipt = await window.contract.methods.approveTransaction(id).send({from:window.defaultAccount,gas:gasEstimate,gasPrice:gasPrice})
+                if(receipt.transactionHash){
+                    getAllProposals()
+                }
+            }catch(err){
+                let em = JSON.parse(err.message.substring(err.message.indexOf('{')))
+                alert(em.originalError.message)
+            }
+        }
+
+        const executeProposal = async (id)=>{
+            try{
+                let gasPrice = await window.web3.eth.getGasPrice()
+                let gasEstimate = await window.contract.methods.executeTransaction(id).estimateGas({from:window.defaultAccount})
+    
+                let receipt = await window.contract.methods.executeTransaction(id).send({from:window.defaultAccount,gas:gasEstimate,gasPrice:gasPrice})
+                if(receipt.transactionHash){
+                    getAllProposals()
+                    let balance = await window.contract.methods.balance().call()
+                    document.querySelector('#balance').innerHTML = parseInt(balance)/parseInt("1000000000000000000") + " ether"
+                }
+            }catch(err){
+                let em = JSON.parse(err.message.substring(err.message.indexOf('{')))
+                alert(em.originalError.message)
+            }
+        }
+        
+
+        document.querySelector('#fundWallet').addEventListener('click',fundWallet)
+        document.querySelector('#propose').addEventListener('click',proposeTransaction)
+        document.querySelector('#allProposals').addEventListener('click',getAllProposals)
+        
+    </script>
+</body>
+</html>
